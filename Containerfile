@@ -10,10 +10,7 @@ LABEL maintainer="bokomoko" \
 # Variáveis de ambiente
 ENV USER_UID=1000 \
     USER_GID=1000 \
-    USERNAME=vscode \
-    TUNNEL_NAME=dev-tunnel \
-    VSCODE_SERVE_MODE=serve-web \
-    TZ=America/Recife
+    USERNAME=vscode
 
 # Instalar dependências do sistema
 RUN apk add --no-cache \
@@ -29,13 +26,16 @@ RUN apk add --no-cache \
     libstdc++ \
     && rm -rf /var/cache/apk/*
 
-# Configurar timezone
-RUN cp /usr/share/zoneinfo/$TZ /etc/localtime && \
-    echo $TZ > /etc/timezone
+# Configurar timezone (será definida via variável de ambiente)
+# Valor padrão será configurado no entrypoint se não for especificado
 
 # Criar usuário não-root
 RUN addgroup -g $USER_GID $USERNAME && \
     adduser -D -u $USER_UID -G $USERNAME -s /bin/bash $USERNAME
+
+# Dar permissão para o usuário vscode modificar timezone
+RUN touch /etc/localtime /etc/timezone && \
+    chown $USERNAME:$USERNAME /etc/localtime /etc/timezone
 
 # Baixar e instalar VS Code CLI
 RUN ARCH=$(uname -m) && \

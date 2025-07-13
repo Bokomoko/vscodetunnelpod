@@ -161,8 +161,8 @@ journalctl --user -u vscode-tunnel.service -f
 | `TUNNEL_PORT` | 8080 | Porta do tunnel |
 | `USER_UID` | 1000 | ID do usuário |
 | `USER_GID` | 1000 | ID do grupo |
-| `TUNNEL_NAME` | dev-tunnel | Nome único do tunnel |
-| `VSCODE_SERVE_MODE` | serve-web | Modo de operação |
+| `TUNNEL_NAME` | dev-tunnel-{user}-{hostname} | Nome único do tunnel |
+| `TZ` | America/Recife | Timezone do container |
 
 ### Volumes Configurados
 
@@ -220,6 +220,44 @@ http://localhost:8000
 4. Selecione seu tunnel na lista
 
 ## ⚙️ Configurações Avançadas
+
+### Personalizar Nome do Tunnel
+
+O nome do tunnel deve ser **único globalmente**. Edite o arquivo `.env`:
+
+```bash
+# Exemplos de nomes únicos:
+TUNNEL_NAME=meuusuario-dev-workspace
+TUNNEL_NAME=empresa-projeto-dev
+TUNNEL_NAME=joao-recife-coding
+TUNNEL_NAME=team-backend-tunnel
+```
+
+**Dicas para nomes únicos:**
+- Use seu username + descrição: `joao-dev-tunnel`
+- Inclua localização: `recife-dev-workspace`
+- Adicione projeto: `projeto-xyz-dev`
+- Use timestamp: `dev-tunnel-$(date +%Y%m%d)`
+
+### Configurar Timezone
+
+Configure o fuso horário editando o arquivo `.env`:
+
+```bash
+# Timezones brasileiros comuns:
+TZ=America/Sao_Paulo    # UTC-3 (Brasília, São Paulo, Rio)
+TZ=America/Recife       # UTC-3 (Recife, Fortaleza, Salvador)
+TZ=America/Manaus       # UTC-4 (Manaus, Amazonas)
+TZ=America/Rio_Branco   # UTC-5 (Rio Branco, Acre)
+
+# Outros exemplos:
+TZ=UTC                  # UTC+0 (Tempo Universal)
+TZ=Europe/London        # UTC+0/+1 (Londres)
+TZ=America/New_York     # UTC-5/-4 (Nova York)
+TZ=Asia/Tokyo           # UTC+9 (Tóquio)
+```
+
+**Formato:** Use sempre `Continente/Cidade` (ex: `America/Sao_Paulo`)
 
 ### Personalizar Porta
 

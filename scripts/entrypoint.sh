@@ -1,11 +1,25 @@
 #!/bin/bash
 set -e
 
+# Definir valores padrão se não estiverem definidos
+TUNNEL_NAME=${TUNNEL_NAME:-"dev-tunnel-$(whoami)-$(hostname)"}
+USERNAME=${USERNAME:-"vscode"}
+TZ=${TZ:-"America/Recife"}
+
+# Configurar timezone se especificada
+if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
+    echo "Configurando timezone para: $TZ"
+    cp "/usr/share/zoneinfo/$TZ" /etc/localtime
+    echo "$TZ" > /etc/timezone
+    export TZ
+else
+    echo "Timezone não especificada ou inválida, usando padrão do sistema"
+fi
+
 echo "=== VS Code Tunnel Container ==="
 echo "Usuário: $USERNAME (UID: $USER_UID, GID: $USER_GID)"
 echo "Timezone: $TZ"
 echo "Tunnel Name: $TUNNEL_NAME"
-echo "Serve Mode: $VSCODE_SERVE_MODE"
 echo "Workspace: /workspace"
 echo "================================"
 
@@ -30,9 +44,8 @@ echo "📁 Conteúdo do workspace:"
 ls -la /workspace | head -10
 
 echo "🚀 Iniciando VS Code Tunnel..."
-echo "   Modo: $VSCODE_SERVE_MODE"
 echo "   Nome: $TUNNEL_NAME"
-echo "   Porta: 8000"
+echo "   Acesso: https://vscode.dev/tunnel ou aguarde interface local"
 
 # Executar diretamente (já estamos como usuário correto)
 exec /usr/local/bin/code tunnel --accept-server-license-terms --name "$TUNNEL_NAME"

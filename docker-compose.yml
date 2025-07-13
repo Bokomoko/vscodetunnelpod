@@ -15,7 +15,7 @@ services:
       - USER_UID=${USER_UID:-1000}
       - USER_GID=${USER_GID:-1000}
       - TUNNEL_NAME=${TUNNEL_NAME:-dev-tunnel}
-      - VSCODE_SERVE_MODE=${VSCODE_SERVE_MODE:-serve-web}
+      - TZ=${TZ:-America/Recife}
 
     # Portas expostas
     ports:
@@ -70,7 +70,7 @@ services:
     command: >
       sh -c "
         echo 'Iniciando VS Code Tunnel...' &&
-        code tunnel --accept-server-license-terms --name $${TUNNEL_NAME} --$${VSCODE_SERVE_MODE} --host 0.0.0.0 --port 8000
+        code tunnel --accept-server-license-terms --name $${TUNNEL_NAME}
       "
 
     # Labels para organização
