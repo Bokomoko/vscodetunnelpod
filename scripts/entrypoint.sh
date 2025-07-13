@@ -35,4 +35,4 @@ echo "   Nome: $TUNNEL_NAME"
 echo "   Porta: 8000"
 
 # Executar diretamente (já estamos como usuário correto)
-exec /usr/local/bin/code tunnel --accept-server-license-terms --name "$TUNNEL_NAME" --$VSCODE_SERVE_MODE --host 0.0.0.0 --port 8000
+exec /usr/local/bin/code tunnel --accept-server-license-terms --name "$TUNNEL_NAME"
