@@ -18,7 +18,7 @@ fi
 # Instalar extensões se for a primeira execução
 if [ ! -f "/home/$USERNAME/.vscode-server/.extensions-installed" ]; then
     echo "🔧 Primeira execução - instalando extensões..."
-    su - $USERNAME -c "/usr/local/bin/install-extensions.sh" || true
+    /usr/local/bin/install-extensions.sh || true
     touch "/home/$USERNAME/.vscode-server/.extensions-installed"
 fi
 
@@ -34,5 +34,5 @@ echo "   Modo: $VSCODE_SERVE_MODE"
 echo "   Nome: $TUNNEL_NAME"
 echo "   Porta: 8000"
 
-# Executar como usuário não-root
-exec su - $USERNAME -c "cd /workspace && /usr/local/bin/code tunnel --accept-server-license-terms --name '$TUNNEL_NAME' --$VSCODE_SERVE_MODE --host 0.0.0.0 --port 8000"
+# Executar diretamente (já estamos como usuário correto)
+exec /usr/local/bin/code tunnel --accept-server-license-terms --name "$TUNNEL_NAME" --$VSCODE_SERVE_MODE --host 0.0.0.0 --port 8000
