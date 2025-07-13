@@ -1,0 +1,225 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vscode-tunnel
+  labels:
+    app: vscode-tunnel
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vscode-tunnel-config
+  namespace: vscode-tunnel
+data:
+  TUNNEL_NAME: "dev-tunnel"
+  VSCODE_SERVE_MODE: "serve-web"
+  USER_UID: "1000"
+  USER_GID: "1000"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vscode-data-pvc
+  namespace: vscode-tunnel
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vscode-extensions-pvc
+  namespace: vscode-tunnel
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workspace-pvc
+  namespace: vscode-tunnel
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vscode-tunnel
+  namespace: vscode-tunnel
+  labels:
+    app: vscode-tunnel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vscode-tunnel
+  template:
+    metadata:
+      labels:
+        app: vscode-tunnel
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      containers:
+      - name: vscode-tunnel
+        image: vscode-tunnel:latest
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 8000
+          name: web
+          protocol: TCP
+        - containerPort: 8080
+          name: tunnel
+          protocol: TCP
+
+        env:
+        - name: USER_UID
+          valueFrom:
+            configMapKeyRef:
+              name: vscode-tunnel-config
+              key: USER_UID
+        - name: USER_GID
+          valueFrom:
+            configMapKeyRef:
+              name: vscode-tunnel-config
+              key: USER_GID
+        - name: TUNNEL_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: vscode-tunnel-config
+              key: TUNNEL_NAME
+        - name: VSCODE_SERVE_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: vscode-tunnel-config
+              key: VSCODE_SERVE_MODE
+
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+        - name: vscode-data
+          mountPath: /home/vscode/.vscode-server
+        - name: vscode-extensions
+          mountPath: /home/vscode/.vscode-server/extensions
+        - name: tmp
+          mountPath: /tmp
+
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+
+      volumes:
+      - name: workspace
+        persistentVolumeClaim:
+          claimName: workspace-pvc
+      - name: vscode-data
+        persistentVolumeClaim:
+          claimName: vscode-data-pvc
+      - name: vscode-extensions
+        persistentVolumeClaim:
+          claimName: vscode-extensions-pvc
+      - name: tmp
+        emptyDir:
+          sizeLimit: 100Mi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vscode-tunnel-service
+  namespace: vscode-tunnel
+  labels:
+    app: vscode-tunnel
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: web
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: tunnel
+  selector:
+    app: vscode-tunnel
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vscode-tunnel-ingress
+  namespace: vscode-tunnel
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+  - hosts:
+    - vscode.example.com
+    secretName: vscode-tls
+  rules:
+  - host: vscode.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vscode-tunnel-service
+            port:
+              number: 8000

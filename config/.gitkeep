@@ -1,0 +1,14 @@
+# Esta pasta contém arquivos de configuração para o VS Code Tunnel Pod
+
+## Estrutura
+
+- `extensions.txt` - Lista de extensões VS Code para instalar automaticamente
+- `settings.json` - Configurações padrão do VS Code
+- `keybindings.json` - Atalhos de teclado personalizados
+- `tasks.json` - Tarefas automatizadas
+- `launch.json` - Configurações de debug
+
+## Uso
+
+Os arquivos nesta pasta são copiados para o container durante a build,
+permitindo personalizar a experiência do VS Code Tunnel.

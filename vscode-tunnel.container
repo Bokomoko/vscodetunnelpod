@@ -1,0 +1,74 @@
+# VS Code Tunnel Container - Quadlet Configuration
+# Arquivo: ~/.config/containers/systemd/vscode-tunnel.container
+# Para usar: systemctl --user daemon-reload && systemctl --user start vscode-tunnel.service
+
+[Unit]
+Description=VS Code Tunnel Container
+Documentation=https://github.com/bokomoko/vscodetunnelpod
+After=vscode-tunnel.pod.service
+Requires=vscode-tunnel.pod.service
+
+[Container]
+# Imagem do container
+Image=localhost/vscode-tunnel:latest
+
+# Nome do container
+ContainerName=vscode-tunnel
+
+# Pod ao qual pertence
+Pod=vscode-tunnel-pod.pod
+
+# Usuário não-root
+User=%i
+Group=%i
+
+# Volumes montados
+Volume=%h/src:/workspace:Z,rw
+Volume=vscode-data:/home/vscode/.vscode-server:Z,rw
+Volume=vscode-extensions:/home/vscode/.vscode-server/extensions:Z,rw
+Volume=vscode-cache:/home/vscode/.cache:Z,rw
+Volume=vscode-config:/home/vscode/.config:Z,rw
+
+# Variáveis de ambiente
+Environment=USER_UID=%i
+Environment=USER_GID=%i
+Environment=TUNNEL_NAME=dev-tunnel-%i
+Environment=VSCODE_SERVE_MODE=serve-web
+
+# Configurações de segurança
+SecurityOpt=no-new-privileges:true
+ReadOnly=false
+
+# Tmpfs para arquivos temporários
+Tmpfs=/tmp:noexec,nosuid,size=100m
+Tmpfs=/var/tmp:noexec,nosuid,size=50m
+
+# Health check
+HealthCmd=curl -f http://localhost:8000/healthz || exit 1
+HealthInterval=30s
+HealthTimeout=10s
+HealthRetries=3
+HealthStartPeriod=60s
+
+# Comando de execução
+Exec=sh -c "echo 'Iniciando VS Code Tunnel...' && code tunnel --accept-server-license-terms --name $TUNNEL_NAME --$VSCODE_SERVE_MODE --host 0.0.0.0 --port 8000"
+
+# Labels
+Label=app=vscode-tunnel
+Label=component=main
+Label=version=1.0
+
+[Service]
+# Reiniciar automaticamente
+Restart=always
+RestartSec=10
+
+# Timeout para parada
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

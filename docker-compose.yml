@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  vscode-tunnel:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: vscode-tunnel
+    image: vscode-tunnel:latest
+    restart: unless-stopped
+
+    # Variáveis de ambiente
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - USER_UID=${USER_UID:-1000}
+      - USER_GID=${USER_GID:-1000}
+      - TUNNEL_NAME=${TUNNEL_NAME:-dev-tunnel}
+      - VSCODE_SERVE_MODE=${VSCODE_SERVE_MODE:-serve-web}
+
+    # Portas expostas
+    ports:
+      - "${VSCODE_PORT:-8000}:8000"
+      - "${TUNNEL_PORT:-8080}:8080"
+
+    # Volumes montados
+    volumes:
+      # Pasta de desenvolvimento (apenas ~/src)
+      - ${HOME}/src:/workspace:Z
+      # Dados persistentes do VS Code
+      - vscode-data:/home/vscode/.vscode-server
+      - vscode-extensions:/home/vscode/.vscode-server/extensions
+      # Cache e configurações
+      - vscode-cache:/home/vscode/.cache
+      - vscode-config:/home/vscode/.config
+
+    # Configurações de rede
+    networks:
+      - vscode-network
+
+    # Configurações de segurança
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+      - /var/tmp:noexec,nosuid,size=50m
+
+    # Recursos limitados
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Configurações do usuário
+    user: "${USER_UID:-1000}:${USER_GID:-1000}"
+
+    # Comando de inicialização
+    command: >
+      sh -c "
+        echo 'Iniciando VS Code Tunnel...' &&
+        code tunnel --accept-server-license-terms --name $${TUNNEL_NAME} --$${VSCODE_SERVE_MODE} --host 0.0.0.0 --port 8000
+      "
+
+    # Labels para organização
+    labels:
+      - "com.vscodetunnel.description=VS Code Tunnel Container"
+      - "com.vscodetunnel.version=1.0"
+      - "com.vscodetunnel.maintainer=bokomoko"
+
+# Volumes nomeados para persistência
+volumes:
+  vscode-data:
+    driver: local
+    labels:
+      - "com.vscodetunnel.volume=data"
+
+  vscode-extensions:
+    driver: local
+    labels:
+      - "com.vscodetunnel.volume=extensions"
+
+  vscode-cache:
+    driver: local
+    labels:
+      - "com.vscodetunnel.volume=cache"
+
+  vscode-config:
+    driver: local
+    labels:
+      - "com.vscodetunnel.volume=config"
+
+# Rede isolada
+networks:
+  vscode-network:
+    driver: bridge
+    labels:
+      - "com.vscodetunnel.network=main"
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

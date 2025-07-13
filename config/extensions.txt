@@ -1,0 +1,58 @@
+# Lista de extensões VS Code para instalar automaticamente
+# Uma extensão por linha, usando o identificador da marketplace
+
+# Linguagens de programação
+ms-python.python
+ms-vscode.vscode-typescript-next
+golang.go
+rust-lang.rust-analyzer
+ms-dotnettools.csharp
+
+# Formatação e linting
+esbenp.prettier-vscode
+ms-vscode.vscode-eslint
+bradlc.vscode-tailwindcss
+stylelint.vscode-stylelint
+
+# Git e controle de versão
+eamodio.gitlens
+github.vscode-pull-request-github
+github.copilot
+github.copilot-chat
+
+# Desenvolvimento web
+formulahendry.auto-rename-tag
+ms-vscode.vscode-html-css-support
+zignd.html-css-class-completion
+ritwickdey.liveserver
+
+# Docker e containers
+ms-azuretools.vscode-docker
+ms-kubernetes-tools.vscode-kubernetes-tools
+
+# Utilitários
+ms-vscode-remote.remote-containers
+ms-vscode-remote.remote-ssh
+ms-vscode.remote-explorer
+alefragnani.bookmarks
+gruntfuggly.todo-tree
+oderwat.indent-rainbow
+pkief.material-icon-theme
+zhuangtongfa.material-theme
+
+# Markdown e documentação
+yzhang.markdown-all-in-one
+shd101wyy.markdown-preview-enhanced
+davidanson.vscode-markdownlint
+
+# Banco de dados
+mtxr.sqltools
+mtxr.sqltools-driver-mysql
+mtxr.sqltools-driver-pg
+mtxr.sqltools-driver-sqlite
+
+# Produtividade
+ms-vscode.vscode-json
+redhat.vscode-yaml
+ms-vscode.hexeditor
+ms-toolsai.jupyter

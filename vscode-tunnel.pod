@@ -1,0 +1,36 @@
+# VS Code Tunnel Pod - Quadlet Configuration
+# Arquivo: ~/.config/containers/systemd/vscode-tunnel.pod
+# Para usar: systemctl --user daemon-reload && systemctl --user start vscode-tunnel.service
+
+[Unit]
+Description=VS Code Tunnel Pod
+Documentation=https://github.com/bokomoko/vscodetunnelpod
+After=network-online.target
+Wants=network-online.target
+
+[Pod]
+# Nome do pod
+PodName=vscode-tunnel-pod
+
+# Rede do pod
+Network=bridge
+
+# Portas publicadas
+PublishPort=8000:8000
+PublishPort=8080:8080
+
+# Labels do pod
+Label=app=vscode-tunnel
+Label=version=1.0
+Label=maintainer=bokomoko
+
+[Service]
+# Reiniciar automaticamente
+Restart=always
+RestartSec=10
+
+# Timeout para parada
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
