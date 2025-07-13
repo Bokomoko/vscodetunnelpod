@@ -9,6 +9,7 @@ TZ=${TZ:-"America/Recife"}
 # Configurar timezone se especificada
 if [ -n "$TZ" ] && [ -f "/usr/share/zoneinfo/$TZ" ]; then
     echo "Configurando timezone para: $TZ"
+    rm -f /etc/localtime /etc/timezone
     cp "/usr/share/zoneinfo/$TZ" /etc/localtime
     echo "$TZ" > /etc/timezone
     export TZ
