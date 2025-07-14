@@ -14,7 +14,7 @@ This project configures a Podman container to run VS Code Tunnel, allowing remot
 
 ```bash
 # 1. Clone the repository
-git clone <repository-url>
+git clone https://github.com/Bokomoko/vscodetunnelpod.git
 cd vscodetunnelpod
 
 # 2. Configure environment variables (IMPORTANT!)
