@@ -6,7 +6,36 @@ This project configures a Podman container to run VS Code Tunnel, allowing remot
 
 - [Podman](https://podman.io/) installed on the system
 - Microsoft or GitHub account for VS Code Tunnel authentication
-- `~/src` folder existing on the host system
+- Source code directory (default: `~/src`) existing on the host system
+
+### 🪟 Windows Users
+
+**Recommended:** Use [WSL2 (Windows Subsystem for Linux)](https://docs.microsoft.com/en-us/windows/wsl/) for the best experience:
+
+1. **Install WSL2:**
+   ```powershell
+   # Run in PowerShell as Administrator
+   wsl --install
+   # Restart your computer
+   ```
+
+2. **Install Podman in WSL2:**
+   ```bash
+   # Inside WSL2 terminal
+   sudo apt update
+   sudo apt install podman
+   ```
+
+3. **Create source directory:**
+   ```bash
+   mkdir -p ~/src
+   ```
+
+4. **Access from VS Code:**
+   - Install the "WSL" extension in VS Code
+   - Use `code .` from WSL2 terminal or connect via Remote-WSL
+
+**Alternative for Windows:** Docker Desktop with Podman compatibility, but WSL2 is strongly recommended for better performance and compatibility.
 
 ## 🚀 Quick Start
 
@@ -23,7 +52,8 @@ cp .env.example .env
 # Edit the .env with your settings:
 # - TUNNEL_NAME: must be globally unique!
 # - TZ: your timezone
-# - USER_UID/USER_GID: your IDs (run: id -u && id -g)
+# - USER_UID/USER_GID: your IDs (run: id -u && id -g) - defaults to 1000:1000
+# - SOURCE_DIR: source directory to share (defaults to ~/src)
 # - VSCODE_PORT: desired port (default: 8000)
 nano .env  # or vim .env
 
@@ -93,11 +123,11 @@ The container is based on an Ubuntu/Alpine image with:
 - VS Code CLI installed
 - Required dependencies
 - Non-root user for security
-- Volume mounted at `/workspace` pointing to `~/src`
+- Volume mounted at `/workspace` pointing to `SOURCE_DIR` (default: `~/src`)
 
 ### Volumes
 
-- `~/src` (host) → `/workspace` (container): Shared development folder
+- `SOURCE_DIR` (host) → `/workspace` (container): Shared development folder (configurable)
 - `vscode-tunnel-data`: Persistent volume for VS Code data
 
 ### Network
@@ -190,15 +220,35 @@ TUNNEL_PORT=8080        # Internal tunnel port
 echo "USER_UID=$(id -u)"     # Ex: USER_UID=1001
 echo "USER_GID=$(id -g)"     # Ex: USER_GID=1001
 
-# Configuration in .env
-USER_UID=1001               # Avoids permission issues
-USER_GID=1001               # Files created with correct owner
+# Configuration in .env (defaults to 1000:1000)
+USER_UID=1000               # Default: 1000 (most Linux users)
+USER_GID=1000               # Default: 1000 (most Linux users)
 ```
 
 **Why this is important:**
 - Avoids permission issues with files created in the container
 - Ensures you can edit files created by VS Code
 - Maintains compatibility between host and container
+- Default 1000:1000 works for most single-user Linux systems
+
+#### **Source Directory**
+
+| Variable | Default | Description | Requirements |
+|----------|---------|-------------|--------------|
+| `SOURCE_DIR` | `~/src` | Host directory to share with container | Must exist and be readable |
+
+```bash
+# Source directory configuration
+SOURCE_DIR=~/src                    # Default: user's src folder
+SOURCE_DIR=/home/user/projects      # Custom projects directory
+SOURCE_DIR=/mnt/d/code              # WSL2: Windows D: drive
+SOURCE_DIR=/workspace               # Custom workspace location
+```
+
+**Path examples by system:**
+- **Linux:** `~/src`, `/home/username/projects`, `/opt/workspace`
+- **WSL2:** `~/src`, `/mnt/c/Users/username/src`, `/mnt/d/projects`
+- **macOS:** `~/src`, `/Users/username/code`, `/opt/development`
 
 #### **Tunnel Name (Critical)**
 
@@ -303,8 +353,14 @@ TUNNEL_PORT=8080
 
 # ------------------ USER ------------------
 # User/group IDs (obtained with: id -u && id -g)
+# Default 1000:1000 works for most single-user Linux systems
 USER_UID=1000
 USER_GID=1000
+
+# ------------------ SOURCE DIRECTORY ------------------
+# Directory to share with container (must exist on host)
+# Examples: ~/src, /home/user/projects, /mnt/c/code (WSL2)
+SOURCE_DIR=~/src
 
 # ------------------ TUNNEL ------------------
 # UNIQUE tunnel name (critical - must be globally unique!)
@@ -337,7 +393,7 @@ CPU_RESERVATION=0.5
 
 | Volume | Destination | Purpose |
 |--------|-------------|---------|
-| `~/src` | `/workspace` | Shared source code |
+| `SOURCE_DIR` | `/workspace` | Shared source code (configurable path) |
 | `vscode-data` | `/home/vscode/.vscode-server` | VS Code Server data |
 | `vscode-extensions` | `/home/vscode/.vscode-server/extensions` | Installed extensions |
 | `vscode-cache` | `/home/vscode/.cache` | System cache |
@@ -363,7 +419,7 @@ Configures the initial environment:
 
 ### `start.sh`
 Starts the VS Code Tunnel container:
-- Mounts the `~/src` volume
+- Mounts the `SOURCE_DIR` volume (default: `~/src`)
 - Configures network ports
 - Starts the tunnel in daemon mode
 
@@ -398,14 +454,17 @@ http://localhost:8000
 # 1. Copy the example file
 cp .env.example .env
 
-# 2. Get your user IDs
+# 2. Get your user IDs (optional - defaults to 1000:1000)
 echo "USER_UID=$(id -u)" >> .env
 echo "USER_GID=$(id -g)" >> .env
 
-# 3. Define a unique name for your tunnel
+# 3. Set your source directory (optional - defaults to ~/src)
+echo "SOURCE_DIR=$HOME/src" >> .env  # or your preferred path
+
+# 4. Define a unique name for your tunnel
 echo "TUNNEL_NAME=$(whoami)-$(hostname)-dev" >> .env
 
-# 4. Configure your timezone
+# 5. Configure your timezone
 echo "TZ=$(timedatectl show --property=Timezone --value)" >> .env
 ```
 
@@ -486,15 +545,27 @@ TUNNEL_NAME=$(whoami)-$(hostname)-$(date +%Y%m%d)-dev
 # Check if USER_UID/USER_GID are correct
 id -u && id -g
 
-# Fix in .env if necessary
-USER_UID=1001
-USER_GID=1001
+# Fix in .env if necessary (defaults are 1000:1000)
+USER_UID=1000
+USER_GID=1000
 
 # Recreate container
 podman-compose down && podman-compose up -d
 ```
 
-#### **3. Timezone not working**
+#### **3. Source Directory Issues**
+```bash
+# Check if SOURCE_DIR exists and is accessible
+ls -la "$SOURCE_DIR" 2>/dev/null || echo "Directory doesn't exist"
+
+# Create directory if needed
+mkdir -p ~/src  # or your custom SOURCE_DIR
+
+# Fix permissions if necessary
+chmod 755 ~/src
+```
+
+#### **4. Timezone not working**
 ```bash
 # Check timezone in container
 podman exec vscode-tunnel date
@@ -508,7 +579,7 @@ TZ=GMT-3                # ❌ Not recommended
 podman exec vscode-tunnel find /usr/share/zoneinfo -type f | head -20
 ```
 
-#### **4. Port already in use**
+#### **5. Port already in use**
 ```bash
 # Check which process uses the port
 sudo netstat -tlnp | grep 8000
@@ -519,7 +590,7 @@ sudo lsof -i :8000
 VSCODE_PORT=9000
 ```
 
-#### **5. Proxy Issues**
+#### **6. Proxy Issues**
 ```bash
 # Test connectivity inside container
 podman exec vscode-tunnel curl -v https://github.com
@@ -571,10 +642,11 @@ netstat -tlnp | grep 8000
 ### Permission Issues
 
 ```bash
-# Check ~/src folder permissions
-ls -la ~/src
+# Check source directory permissions
+ls -la "$SOURCE_DIR" 2>/dev/null || echo "SOURCE_DIR not found"
 
 # Fix if necessary
+mkdir -p ~/src  # or your SOURCE_DIR
 chmod 755 ~/src
 ```
 
@@ -606,13 +678,20 @@ fi
 source .env
 
 # Validate required variables
-required_vars=("TUNNEL_NAME" "TZ" "USER_UID" "USER_GID" "VSCODE_PORT")
+required_vars=("TUNNEL_NAME" "TZ" "USER_UID" "USER_GID" "VSCODE_PORT" "SOURCE_DIR")
 for var in "${required_vars[@]}"; do
     if [[ -z "${!var}" ]]; then
         echo "❌ Variable $var not defined in .env"
         exit 1
     fi
 done
+
+# Check if SOURCE_DIR exists
+if [[ ! -d "$SOURCE_DIR" ]]; then
+    echo "❌ SOURCE_DIR '$SOURCE_DIR' does not exist"
+    echo "   Create it with: mkdir -p '$SOURCE_DIR'"
+    exit 1
+fi
 
 # Validate timezone format
 if ! timedatectl list-timezones | grep -q "^$TZ$"; then
@@ -635,7 +714,8 @@ echo "📋 Summary:"
 echo "   🏷️  Tunnel: $TUNNEL_NAME"
 echo "   🌍 Timezone: $TZ"
 echo "   👤 User: $USER_UID:$USER_GID"
-echo "   🔌 Port: $VSCODE_PORT"
+echo "   � Source: $SOURCE_DIR"
+echo "   �🔌 Port: $VSCODE_PORT"
 ```
 
 #### **Test Connectivity**
@@ -695,7 +775,121 @@ sudo dnf update podman  # Fedora/RHEL
 sudo apt update && sudo apt upgrade podman  # Ubuntu/Debian
 ```
 
-## 🤝 Contributing
+## � Windows Users Guide
+
+### Using WSL2 (Recommended)
+
+WSL2 provides the best experience for running Podman and this VS Code Tunnel setup on Windows.
+
+#### **Initial Setup**
+
+1. **Install WSL2:**
+   ```powershell
+   # Run PowerShell as Administrator
+   wsl --install
+   # Restart computer when prompted
+   ```
+
+2. **Update WSL2 (if already installed):**
+   ```powershell
+   wsl --update
+   wsl --set-default-version 2
+   ```
+
+3. **Install Ubuntu (recommended):**
+   ```powershell
+   wsl --install -d Ubuntu
+   ```
+
+#### **Install Podman in WSL2**
+
+```bash
+# Inside WSL2 Ubuntu terminal
+sudo apt update
+sudo apt install -y podman
+
+# Verify installation
+podman --version
+```
+
+#### **Configure Source Directory**
+
+```bash
+# Option 1: Use WSL2 home directory (recommended)
+mkdir -p ~/src
+SOURCE_DIR=~/src
+
+# Option 2: Access Windows drives
+mkdir -p /mnt/c/Users/$USER/src
+SOURCE_DIR=/mnt/c/Users/$USER/src
+
+# Option 3: Use Windows D: drive
+mkdir -p /mnt/d/projects
+SOURCE_DIR=/mnt/d/projects
+```
+
+#### **Configure .env for WSL2**
+
+```bash
+# Example .env configuration for WSL2
+cp .env.example .env
+
+# Edit with your preferences
+nano .env
+```
+
+Example WSL2 `.env`:
+```bash
+# WSL2 optimized configuration
+USER_UID=1000
+USER_GID=1000
+SOURCE_DIR=/mnt/c/Users/yourusername/src  # Windows directory
+TUNNEL_NAME=wsl-dev-tunnel-$(whoami)
+TZ=America/New_York
+VSCODE_PORT=8000
+```
+
+#### **VS Code Integration**
+
+1. **Install VS Code Extensions:**
+   - [WSL Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl)
+   - [Remote Development](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack)
+
+2. **Connect to WSL2:**
+   ```bash
+   # From WSL2 terminal in your project directory
+   code .
+   ```
+
+3. **Or connect via Command Palette:**
+   - `Ctrl+Shift+P` → "WSL: Connect to WSL"
+
+#### **Performance Tips for WSL2**
+
+- **Use WSL2 filesystem** (`~/src`) for better performance
+- **Avoid frequent cross-filesystem operations** (Windows ↔ WSL2)
+- **Configure Windows Defender exclusions** for WSL2 directories
+- **Allocate sufficient resources** to WSL2 via `.wslconfig`
+
+**Example `.wslconfig`** (place in `C:\Users\%USERNAME%\.wslconfig`):
+```ini
+[wsl2]
+memory=4GB
+processors=2
+swap=2GB
+```
+
+#### **Alternative: Docker Desktop**
+
+If you prefer Docker Desktop (not recommended for best performance):
+
+1. Install [Docker Desktop](https://www.docker.com/products/docker-desktop)
+2. Enable WSL2 backend in Docker Desktop settings
+3. Use `docker-compose` instead of `podman-compose`
+
+**Note:** WSL2 with native Podman provides better performance and resource usage.
+
+## �🤝 Contributing
 
 ### 📋 How to Contribute
 
@@ -790,7 +984,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - 🐛 [Issues](https://github.com/your-username/vscodetunnelpod/issues)
 - 💬 [Discussions](https://github.com/your-username/vscodetunnelpod/discussions)
-- 📧 Email: your-email@example.com
+- 📧 Email: bokomoko+vscodetunnelpod@gmail.com
 
 ---
 
